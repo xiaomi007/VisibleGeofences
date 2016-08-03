@@ -17,6 +17,19 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    productFlavors {
+
+        office {
+            manifestPlaceholders = [map_key:"AIzaSyB3ZXO-HdsZV5FPbSooBiyfREfn38Jhpps"]
+        }
+
+        home {
+            manifestPlaceholders = [map_key:"AIzaSyCwwERN1uQg5Z44TkY625GSzHwuJlVYhrY"]
+        }
+
+    }
+
 }
 
 dependencies {
@@ -29,4 +42,5 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.google.android.gms:play-services-maps:9.4.0'
     compile 'com.google.android.gms:play-services-location:9.4.0'
+    compile 'com.google.code.gson:gson:2.4'
 }

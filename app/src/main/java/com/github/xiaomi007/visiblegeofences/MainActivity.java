@@ -20,9 +20,19 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonReader;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks, OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -49,7 +59,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         } else {
             createClient();
         }
-
 
 
     }
@@ -101,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 .build();
     }
 
-    private boolean checkPermission(){
+    private boolean checkPermission() {
         int finePermission = PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
         int coarsePermission = PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
         if (finePermission == PermissionChecker.PERMISSION_GRANTED && coarsePermission == PermissionChecker.PERMISSION_GRANTED) {
@@ -131,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                         PERMISSION_REQUEST
-                        );
+                );
                 return false;
             }
         }
@@ -144,19 +153,54 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     }
 
     @SuppressWarnings("MissingPermission")
-    private void initMap(){
+    private void initMap() {
         if (mGoogleMap != null && mClient != null && mClient.isConnected()) {
             Location location = LocationServices.FusedLocationApi.getLastLocation(mClient);
             if (location == null) {
                 location = new Location("tokyo");
-                location.setLatitude(35.6556);
-                location.setLongitude(139.7523);
+                location.setLatitude(35.6291);
+                location.setLongitude(139.7429);
             }
-            mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAP_INIT_ZOOM));
+//            mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), MAP_INIT_ZOOM));
+
+            final JsonReader jsonReader = new JsonReader(new BufferedReader(new InputStreamReader(getResources().openRawResource(R.raw.fences))));
+            final Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(jsonReader, JsonObject.class);
+
+            if (jsonObject.has("data")) {
+                final JsonArray data = jsonObject.get("data").getAsJsonArray();
+                LatLngBounds.Builder latLngBounds = LatLngBounds.builder();
+                for (JsonElement fence : data) {
+                    final JsonObject obj = fence.getAsJsonObject();
+                    final double latitude = obj.get("latitude").getAsDouble();
+                    final double longitude = obj.get("longitude").getAsDouble();
+                    final double radius = obj.get("radius").getAsDouble();
+
+                    final LatLng latLng = new LatLng(latitude, longitude);
+                    latLngBounds.include(latLng);
+                    mGoogleMap.setOnMapLongClickListener(this);
+                    final float markerColor = radius <= 100 ? BitmapDescriptorFactory.HUE_RED : radius <= 200 ? BitmapDescriptorFactory.HUE_BLUE : radius <= 300 ? BitmapDescriptorFactory.HUE_GREEN : BitmapDescriptorFactory.HUE_YELLOW;
+                    final int color = radius <= 100 ? Color.argb(50, 255, 0, 0) : radius <= 200 ? Color.argb(50, 0, 0, 255) : radius <= 300 ? Color.argb(50, 0, 255, 0) : Color.argb(50, 255, 255, 0);
+                    mGoogleMap.addMarker(
+                            new MarkerOptions()
+                                    .draggable(true)
+                                    .position(latLng)
+                                    .icon(BitmapDescriptorFactory.defaultMarker(markerColor))
+                    );
+                    mGoogleMap.addCircle(
+                            new CircleOptions()
+                                    .center(latLng)
+                                    .radius(radius)
+                                    .strokeColor(color)
+                                    .fillColor(color)
+                    );
+
+                }
+                mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds.build(), 0));
+            }
 
             //interaction callback
-            mGoogleMap.setOnMapLongClickListener(this);
-        }
+            }
     }
 
     @Override
@@ -164,7 +208,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         if (mGoogleMap != null) {
             mGoogleMap.addMarker(
                     new MarkerOptions().draggable(true)
-                    .position(latLng)
+                            .position(latLng)
             );
             mGoogleMap.addCircle(new CircleOptions().center(latLng).radius(100).strokeColor(Color.argb(50, 255, 0, 0)).fillColor(Color.argb(50, 255, 0, 0)));
         }
